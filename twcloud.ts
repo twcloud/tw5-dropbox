@@ -392,7 +392,7 @@ namespace wrapper {
 	}
 	// Do our stuff when the page has loaded
 	document.addEventListener("DOMContentLoaded", function (event) {
-		new twits();
+		//new twits();
 	}, false);
 
 }
