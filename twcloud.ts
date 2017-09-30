@@ -29,16 +29,22 @@ namespace wrapper {
 
 		constructor() {
 			this.client = new Dropbox({
-				clientId: "gy3j4gsa191p31x",
-				//accessToken: 'z98pMtdzbmkAAAAAAABhebCmMa8dvR2xPvM7xCw5XVRe8gzTgFcrznTblAHA-q1w' 
+				clientId: this.apiKey
 			})
 			if (document.location.hash) {
 				const data = document.location.hash.slice(1);
 				console.log(data.split('&').map(e => e.split('=').map(f => decodeURIComponent(f))));
 			}
 			debugger;
-			document.location.href = this.client.getAuthenticationUrl(document.location.href);
-
+			//document.location.href = this.client.getAuthenticationUrl(document.location.href);
+			//this.client.getAccessToken()
+			this.client.authTokenRevoke(undefined).then(res => {
+				return this.client.filesListFolder({
+					path: ""
+				})
+			}).then(res => {
+				debugger;
+			})
 			return;
 			this.initApp();
 		}
@@ -392,7 +398,7 @@ namespace wrapper {
 	}
 	// Do our stuff when the page has loaded
 	document.addEventListener("DOMContentLoaded", function (event) {
-		//new twits();
+		new twits();
 	}, false);
 
 }
