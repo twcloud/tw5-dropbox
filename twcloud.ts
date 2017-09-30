@@ -1,135 +1,174 @@
 /// <reference path="./dropbox.min.d.ts" />
+/// <reference path="./Rx.min.d.ts" />
+
 interface Window {
 	saveChanges: Function;
 	Dropbox: typeof Dropbox;
 	jQuery: any;
 	$: any;
 	$tw: any;
+	Rx: typeof Rx;
 }
+type rxjs = typeof Rx;
+type Hashmap<T> = { [K: string]: T };
 namespace wrapper {
+	//PARANOIA: Delete the window property of these libraries to prevent 
+	//Javascript in the page from messing with them.
+	const Rx: rxjs = window.Rx;
+	delete window.Rx;
 
 	const Dropbox: typeof DropboxTypes.Dropbox = window.Dropbox;
 	delete window.Dropbox;
+
 	const $ = window.jQuery;
 	delete window.$;
 	delete window.jQuery;
+
+	//declarations needed for the page
 	declare const $tw: any, store: any, clearMessage: Function, displayMessage: Function;
 	declare const story: any, main: Function, config: any;
 
-	const dbx = new Dropbox({ accessToken: 'z98pMtdzbmkAAAAAAABhebCmMa8dvR2xPvM7xCw5XVRe8gzTgFcrznTblAHA-q1w' });
+	//load classes from Rx
+	const { Observable, Subject, Subscriber, Subscription } = Rx;
 
-	// var twits = {
-	// };
 
 	class twits {
+		currentRev: string;
+		originalText: string;
+		originalPath: string;
 		client: Dropbox;
-		isProd: false                // (window.location.protocol + "//" + window.location.host + window.location.pathname) === "https://dl.dropboxusercontent.com/spa/4f6lw6nhu5zn5pr/TiddlyWiki/public/index.html",
+		isProd: false
 		apiKeyProd: ""               //waukml5k6zt6vzr
-		apiKey: "gy3j4gsa191p31x" //5zahnrxzw6wsy70
+		apiKey = "gy3j4gsa191p31x" //5zahnrxzw6wsy70
+		token: {
+			access_token: string,
+			account_id: string,
+			token_type: "bearer",
+			uid: string
+		} = {} as any;
 
 		constructor() {
 			this.client = new Dropbox({
 				clientId: this.apiKey
-			})
+			});
+
+			// Authenticate against Dropbox
+			this.setStatusMessage("Authenticating with Dropbox...");
+
 			if (document.location.hash) {
 				const data = document.location.hash.slice(1);
-				console.log(data.split('&').map(e => e.split('=').map(f => decodeURIComponent(f))));
-			}
-			debugger;
-			//document.location.href = this.client.getAuthenticationUrl(document.location.href);
-			//this.client.getAccessToken()
-			this.client.authTokenRevoke(undefined).then(res => {
-				return this.client.filesListFolder({
-					path: ""
+				data.split('&').map(e => e.split('=').map(f => decodeURIComponent(f))).forEach(e => {
+					this.token[e[0]] = e[1];
 				})
-			}).then(res => {
-				debugger;
-			})
-			return;
+				location.hash = "";
+			}
+
+			if (!this.token.access_token) {
+				location.href = this.client.getAuthenticationUrl(location.href);
+				return;
+			} else {
+				this.client.setAccessToken(this.token.access_token);
+			}
 			this.initApp();
 		}
 
 		// Main application
 		initApp() {
-			// Initialise Dropbox for full access
-			this.setStatusMessage("Initializing...");
-			// var apiKey = this.isProd ? this.apiKeyProd : this.apiKeyDev;
-			// this.client = new _dropbox.Client({
-			// 	key: apiKey, sandbox: false
-			// });
-
-			// Apparently not needed any more (since Dropbox.js 10.x)
-			// // Use the basic redirection authentication driver
-			// this.client.authDriver(new Dropbox.Drivers.Redirect({useQuery: false}));
-
-			// Authenticate against Dropbox
-			this.setStatusMessage("Authenticating with Dropbox...");
-			this.client.authenticate(function (error, client) {
-				this.clearStatusMessage();
-				if (error) {
-					return this.showError(error);  // Something went wrong.
-				}
-				this.readFolder("/", document.getElementById("twits-files"));
-
-			});
+			this.clearStatusMessage();
+			this.readFolder("", document.getElementById("twits-files"));
 		};
+		isFileMetadata(a: any): a is DropboxTypes.files.FileMetadataReference {
+			return a[".tag"] === "file";
+		}
+		isFolderMetadata(a: any): a is DropboxTypes.files.FolderMetadataReference {
+			return a[".tag"] === "folder";
+		}
+		isHtmlFile(stat: DropboxTypes.files.FileMetadataReference) {
+			return ['.htm', '.html'].indexOf(stat.name.slice(stat.name.lastIndexOf('.'))) > -1
+		}
+		getHumanSize(size: number) {
+			const TAGS = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+			let power = 0;
+			while (size >= 1024) {
+				size /= 1024;
+				power++;
+			}
+			return size.toFixed(1) + TAGS[power];
+		}
+		streamFilesListFolder(path) {
+			const output = new Subject<DropboxTypes.files.ListFolderResult["entries"]>();
 
-		readFolder(path, parentNode) {
+			function resHandler(res) {
+				output.next(res.entries);
+				if (res.has_more)
+					return this.client.filesListFolderContinue({
+						cursor: res.cursor
+					}).then(resHandler)
+				else
+					output.complete();
+			}
+
+			this.client.filesListFolder({
+				path: path
+			}).then(resHandler);
+
+			return output.asObservable();
+		}
+		readFolder(path, parentNode: Node) {
 			// Loading message
+			const loadingMessage = document.createTextNode("Loading...");
 			var listParent = document.createElement("ol");
-			listParent.appendChild(document.createTextNode("Loading..."));
+			listParent.appendChild(loadingMessage);
 			parentNode.appendChild(listParent);
-			// Read the top level directory
-			this.client.stat(path, { readDir: true }, function (error, stat, stats) {
-				if (error) {
-					return this.showError(error);  // Something went wrong.
-				}
-				// Remove loading message
-				while (listParent.hasChildNodes()) {
-					listParent.removeChild(listParent.firstChild);
-				}
+
+			this.streamFilesListFolder(path).subscribe((stats) => {
+
 				// Load entries
 				for (var t = 0; t < stats.length; t++) {
-					stat = stats[t];
+					const stat = stats[t];
+
 					var listItem = document.createElement("li"),
 						classes = [];
-					if (stat.isFolder) {
+					if (this.isFolderMetadata(stat)) {
 						classes.push("twits-folder");
-					} else {
+					} else if (this.isFileMetadata(stat)) {
 						classes.push("twits-file");
-						if (stat.mimeType === "text/html") {
+						if (this.isHtmlFile(stat)) {
 							classes.push("twits-file-html");
 						}
 					}
 					var link;
 					classes.push("twits-file-entry");
-					if (stat.isFolder || (stat.isFile && stat.mimeType === "text/html")) {
+					if (this.isFolderMetadata(stat) || (this.isFileMetadata(stat) && this.isHtmlFile(stat))) {
 						link = document.createElement("a");
-						link.href = "#";
-						link.setAttribute("data-twits-path", stat.path);
-						link.addEventListener("click", this.onClickFolderEntry, false);
+						link.href = "javascript:false;";
+						link.setAttribute("data-twits-path", stat.path_lower);
+						link.addEventListener("click", this.onClickFolderEntry(), false);
 					} else {
 						link = document.createElement("span");
 					}
 					link.className = classes.join(" ");
 					var img = document.createElement("img");
-					img.src = "dropbox-icons/16x16/" + stat.typeIcon + ".gif";
+					img.src = "dropbox-icons-broken.gif";
 					img.style.width = "16px";
 					img.style.height = "16px";
 					link.appendChild(img);
 					link.appendChild(document.createTextNode(stat.name));
-					if (stat.isFile && stat.humanSize) {
+					if (this.isFileMetadata(stat) && this.getHumanSize(stat.size)) {
 						var size = document.createElement("span");
-						size.appendChild(document.createTextNode(" (" + stat.humanSize + ")"));
+						size.appendChild(document.createTextNode(" (" + this.getHumanSize(stat.size) + ")"));
 						link.appendChild(size);
 					}
 					listItem.appendChild(link);
 					listParent.appendChild(listItem);
 				}
+			}, x => console.error(x), () => {
+				loadingMessage.remove();
+				//TODO: Insert sorting here
 			});
 		};
 
-		onClickFolderEntry(event) {
+		onClickFolderEntry() {
 			const self = this;
 			return function (this: HTMLAnchorElement, event) {
 				var path = this.getAttribute("data-twits-path"),
@@ -151,32 +190,37 @@ namespace wrapper {
 			// Read the TiddlyWiki file
 			// We can't trust Dropbox to have detected that the file is UTF8, so we load it in binary and manually decode it
 			this.setStatusMessage("Reading HTML file...");
-			this.trackProgress(this.client.readFile(path, { arrayBuffer: true }, function (error, data) {
-				if (error) {
-					return this.showError(error);  // Something went wrong.
-				}
-				// We have to manually decode the file as UTF8, annoyingly
-				var byteData = new Uint8Array(data);
-				data = this.manualConvertUTF8ToUnicode(byteData);
-				this.clearStatusMessage();
-				// Check it is a valid TiddlyWiki
-				if (this.isTiddlyWiki(data)) {
-					// Save the text and path
-					this.originalPath = path;
-					this.originalText = data;
-					// Fillet the content out of the TiddlyWiki
-					//this.filletTiddlyWiki(data);
-					this.loadTW5(data);
-				} else {
-					this.showError("Not a TiddlyWiki!");
-				}
-			}));
+			this.client.filesDownload({
+				path: path
+			}).then(res => {
+				//debugger;
+				this.currentRev = res.rev;
+				return new Promise<string>(resolve => {
+					const data: Blob = res.fileBlob;
+					console.log(data.type);
+					var reader = new FileReader();
+					reader.addEventListener("loadend", () => {
+						// We have to manually decode the file as UTF8, annoyingly
+						// [ I wonder if this is still necessary in v2 since it is a buffer -Arlen ]
+						const byteData = new Uint8Array(reader.result);
+						const unicode = this.manualConvertUTF8ToUnicode(byteData);
+						this.originalPath = path;
+						this.originalText = unicode;
+						resolve(unicode);
+					});
+					reader.readAsArrayBuffer(data);
+					//debugger;
+				})
+			}).then(data => {
+				this.loadTW5(data);
+			})
+
 		}
 
 
 
 		getStatusPanel() {
-			debugger;
+			// debugger;
 			var getElement = function (id, parentNode) {
 				parentNode = parentNode || document;
 				var el = document.getElementById(id);
@@ -237,23 +281,14 @@ namespace wrapper {
 
 		};
 
-		// Determine whether a string is a valid TiddlyWiki 2.x.x document
-		isTiddlyWiki(text) {
-			return true; //text.indexOf(this.indexTWC) === 0 || text.indexOf(this.indexTW5) > -1;
-		};
-
 		loadTW5(data) {
-			var rawIndex = data.indexOf('<' + '!--~~ Raw markup ~~--' + '>');
 
-			//window.temp = data;
+			var rawIndex = data.indexOf('<' + '!--~~ Raw markup ~~--' + '>');
 
 			var doc = document.createElement('html');
 			doc.innerHTML = data;
 
-			//this.test = doc;
-
 			while (doc.children[0].childNodes.length > 0) {
-				//console.log(doc.children[0].childNodes[0]); 
 				try {
 					$(document.head).append(doc.children[0].childNodes[0]);
 				} catch (e) {
@@ -262,16 +297,6 @@ namespace wrapper {
 			}
 			document.body.className = doc.children[1].className;
 			$(document.body).html(doc.children[1].innerHTML);
-			//while( doc.children[1].childNodes.length > 0 ) {
-			//console.log(doc.children[1].childNodes[0]); 
-			//try{ 
-			//	document.body.appendChild(doc.children[1].childNodes[0]);
-			//} catch (e) {
-			//	console.log(e); 
-			//} 
-			//}
-
-			//var tags = document.getElementsByTagName('script');
 
 			$tw.saverHandler.savers.push({
 				info: {
@@ -279,98 +304,27 @@ namespace wrapper {
 					priority: 5000,
 					capabilities: ["save"]
 				},
-				save: function (text, method, callback, options) {
+				save: (text, method, callback, options) => {
 					this.setStatusMessage("Saving changes...");
-					this.setProgress("");
-					this.trackProgress(this.client.writeFile(this.originalPath, text, function (error, stat) {
-						if (error) {
-							this.showError(error);  // Something went wrong.
-							callback(error);
-							return;
-						} else {
-							this.clearStatusMessage();
-							callback(null);
-						}
-					}), true);
+					this.client.filesUpload({
+						path: this.originalPath,
+					  mode: {
+							".tag": "update",
+							"update": this.currentRev
+						},
+						contents: text
+					}).then(res => {
+						this.clearStatusMessage();
+						this.currentRev = res.rev;
+						callback(null);
+					}).catch(err => {
+						console.log(err);
+						callback(err);
+					})
+					//TODO: add progress tracker
 					return true;
 				}
 			});
-
-		};
-		blocks: any[];
-		// Extract the blocks of a TiddlyWiki 2.x.x document and add them to the current document
-		filletTiddlyWiki(text) {
-			// Extract a block from a string given start and end markers
-			var extractBlock = function (start, end) {
-				var s = text.indexOf(start);
-				if (s !== -1) {
-					var e = text.indexOf(end, s);
-					if (e !== -1) {
-						return text.substring(s + start.length, e);
-					}
-				}
-				return null;
-			};
-			// Collect up all the blocks in the document
-			var output = { html: [], script: [], style: [] };
-			for (var block = 0; block < this.blocks.length; block++) {
-				var blockInfo = this.blocks[block],
-					blockText = extractBlock(blockInfo.start, blockInfo.end);
-				if (blockText) {
-					output[blockInfo.type].push(blockText);
-				}
-			}
-			// Process the HTML blocks
-			document.body.innerHTML = output.html.join("\n");
-			// Process the style blocks
-			var styleElement = document.createElement("style");
-			styleElement.type = "text/css";
-			styleElement.appendChild(document.createTextNode(output.style.join("\n")));
-			document.getElementsByTagName("head")[0].appendChild(styleElement);
-			// Compose the boot tail script
-			var tail = "twits.patchTiddlyWiki();";
-			// Process the script blocks
-			var scr = document.createElement("script");
-			scr.type = "text/javascript";
-			scr.appendChild(document.createTextNode(output.script.join("\n") + "\n" + tail + "\n"));
-			document.getElementsByTagName("head")[0].appendChild(scr);
-		};
-
-		//TWC
-
-		patchedSaveChanges(onlyIfDirty, tiddlers) {
-
-			if (onlyIfDirty && !store.isDirty())
-				return;
-			clearMessage();
-			this.setStatusMessage("Saving changes...");
-			this.setProgress("");
-
-			// Save the file to Dropbox
-			this.trackProgress(this.client.writeFile(this.originalPath, revised, function (error, stat) {
-				if (error) {
-					return this.showError(error);  // Something went wrong.
-				}
-				this.clearStatusMessage();
-				displayMessage(config.messages.mainSaved);
-				store.setDirty(false);
-			}), true);
-		};
-
-		patchTiddlyWiki() {
-			window.saveChanges = this.patchedSaveChanges;
-			config.tasks.save.action = this.patchedSaveChanges;
-			// Older TiddlyWikis use loadOptionsCookie()
-			var overrideFn = window.loadOptions ? "loadOptions" : "loadOptionsCookie";
-			var _old_ = window[overrideFn];
-			window[overrideFn] = function () {
-				_old_();
-				config.options.chkHttpReadOnly = false;
-			};
-			main();
-			window[overrideFn] = _old_;
-			story.closeAllTiddlers();
-			story.displayTiddlers(null, store.filterTiddlers(store.getTiddlerText("DefaultTiddlers")));
 		};
 
 		manualConvertUTF8ToUnicode(utf) {

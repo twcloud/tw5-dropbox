@@ -4,10 +4,11 @@
 <meta name="utf8beacon" content="éçñøåá—" />
 <title>TiddlyWiki5 in the Sky using Dropbox</title>
 <script src="dropbox.min.js"></script>
+<script src="Rx.min.js"></script>
 <script src="//code.jquery.com/jquery-2.2.0.min.js"></script>
-<link rel="icon" href="https://dl.dropboxusercontent.com/s/tm6mwe3jg18o13f/favicon.ico" type="image/x-icon"/>
-<link rel="shortcut icon" href="https://dl.dropboxusercontent.com/s/tm6mwe3jg18o13f/favicon.ico" type="image/x-icon"/>
-<script src="twcloud.js"></script>
+<link rel="icon" href="favicon.ico" type="image/x-icon"/>
+<link rel="shortcut icon" href="favicon.ico" type="image/x-icon"/>
+<script src="twcloud.js?201709301"></script>
 <style type="text/css">
 
 /* These styles are in the head and so will survive when the parasite TiddlyWiki is loaded */
@@ -47,7 +48,7 @@
 
 body {
 	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-	margin: 150px 0px;
+	margin: 50px 0px;
 	padding: 0px;
 	text-align: center;
 }
@@ -118,29 +119,32 @@ body {
 
 </style>
 <div id="twits-greeting">
-<h1>TiddlyWiki5 in the Sky<br>using Dropbox <span id="twits-dev"></span> <span class="twits-beta">beta</span> <br/>(by <a href="https://github.com/Arlen22">@Arlen22</a>*)</h1>
-<p>This app enables you to directly edit TiddlyWiki files stored in your Dropbox. It runs entirely in your browser so your data is never uploaded anywhere except directly to the dropbox account you are logged into. **</p>
-<p>If you are having trouble with accented characters in your TiddlyWiki files please see <a href="https://groups.google.com/d/topic/tiddlywiki/dXuJsnD8Irw/discussion" target="_blank">this discussion</a></p>
-<p>This file uses the Dropbox v1 API, which is now disabled. An update should be available soon. --2017-09-30</p>
+<h1>
+	TiddlyWiki5 in the Sky<br>
+	using Dropbox <span class="twits-beta">beta</span> <br/>
+	(by <a href="https://github.com/Arlen22">@Arlen22</a>*)
+</h1>
+<p>
+	This app enables you to directly edit TiddlyWiki files stored in your Dropbox. It runs entirely 
+	in your browser so your data is never uploaded anywhere except directly to the dropbox account 
+	you are logged into. **
+</p>
+<p>
+	If you are having trouble with accented characters in your TiddlyWiki files please see 
+	<a href="https://groups.google.com/d/topic/tiddlywiki/dXuJsnD8Irw/discussion" target="_blank">this discussion</a>
+</p>
+<p>This site has now been upgraded to the Dropbox V2 API</p>
 <div id="twits-files"></div>
 <div id="twits-footer">
-<p>*Built by <a href="http://twitter.com/Jermolene">@Jermolene</a>, and modified by <a href="https://github.com/Arlen22">@Arlen22</a>.</p>
-<p>**This does not apply to any code in the TiddlyWiki itself, only to the code in this page.</p>
+<p>
+	*Built by <a href="http://twitter.com/Jermolene">@Jermolene</a>, and modified by 
+	<a href="https://github.com/Arlen22">@Arlen22</a>.
+</p>
+<p>
+	**This does not apply to any code in the TiddlyWiki itself, only to the code in this page.
+</p>
 </div>
 </div>
 
-<script type="text/javascript">
-
-  /*var _gaq = _gaq || [];
-  _gaq.push(['_setAccount', 'UA-34591755-1']);
-  _gaq.push(['_trackPageview']);
-
-  (function() {
-    var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
-    ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
-    var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
-  })();*/
-
-</script>
 </body>
 </html>

@@ -1,0 +1,26 @@
+{
+  "name": "tw5-dropbox",
+  "version": "1.0.0",
+  "description": "TiddlyWiki Five in the Sky for Dropbox",
+  "main": "twcloud",
+  "directories": {
+    "doc": "docs"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "rxjs": "^5.4.3"    
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/twcloud/tw5-dropbox.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/twcloud/tw5-dropbox/issues"
+  },
+  "homepage": "https://github.com/twcloud/tw5-dropbox#readme"
+}
