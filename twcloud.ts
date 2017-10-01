@@ -115,17 +115,31 @@ namespace wrapper {
 			return output.asObservable();
 		}
 		readFolder(path, parentNode: Node) {
-			// Loading message
-			const loadingMessage = document.createTextNode("Loading...");
+			
+			const loadingMessage = document.createElement("li");
+			loadingMessage.innerText = "Loading...";
+			loadingMessage.classList.add("loading-message");
+
 			var listParent = document.createElement("ol");
 			listParent.appendChild(loadingMessage);
+
 			parentNode.appendChild(listParent);
 
+			const filelist: DropboxTypes.files.ListFolderResult["entries"] = [];
 			this.streamFilesListFolder(path).subscribe((stats) => {
+				filelist.push.apply(filelist, stats);
+				loadingMessage.innerText = "Loading " + filelist.length + "...";
+			}, x => console.error(x), () => {
+				loadingMessage.remove();
 
-				// Load entries
-				for (var t = 0; t < stats.length; t++) {
-					const stat = stats[t];
+				filelist.sort((a, b) => {
+					//order by isFolder DESC, name ASC
+					return (+this.isFolderMetadata(b) - +this.isFolderMetadata(a))
+						|| a.name.localeCompare(b.name);
+				})
+
+				for (var t = 0; t < filelist.length; t++) {
+					const stat = filelist[t];
 
 					var listItem = document.createElement("li"),
 						classes = [];
@@ -162,9 +176,6 @@ namespace wrapper {
 					listItem.appendChild(link);
 					listParent.appendChild(listItem);
 				}
-			}, x => console.error(x), () => {
-				loadingMessage.remove();
-				//TODO: Insert sorting here
 			});
 		};
 
@@ -282,7 +293,7 @@ namespace wrapper {
 		};
 
 		loadTW5(data) {
-
+			location.hash = "";
 			var rawIndex = data.indexOf('<' + '!--~~ Raw markup ~~--' + '>');
 
 			var doc = document.createElement('html');
@@ -308,7 +319,7 @@ namespace wrapper {
 					this.setStatusMessage("Saving changes...");
 					this.client.filesUpload({
 						path: this.originalPath,
-					  mode: {
+						mode: {
 							".tag": "update",
 							"update": this.currentRev
 						},
