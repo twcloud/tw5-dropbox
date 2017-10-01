@@ -32,7 +32,10 @@ var wrapper;
                 data.split('&').map(function (e) { return e.split('=').map(function (f) { return decodeURIComponent(f); }); }).forEach(function (e) {
                     _this.token[e[0]] = e[1];
                 });
-                location.hash = "";
+                //keep the hash on localhost for development purposes
+                //it will be removed later when the wiki is loaded
+                if (location.origin !== "http://localhost")
+                    location.hash = "";
             }
             if (!this.token.access_token) {
                 location.href = this.client.getAuthenticationUrl(location.href);
@@ -45,8 +48,23 @@ var wrapper;
         }
         // Main application
         twits.prototype.initApp = function () {
+            var _this = this;
             this.clearStatusMessage();
-            this.readFolder("", document.getElementById("twits-files"));
+            this.client.usersGetCurrentAccount(undefined).then(function (res) {
+                _this.user = res;
+                var profile = document.getElementById("twits-profile");
+                var pic = document.createElement('img');
+                pic.src = _this.user.profile_photo_url;
+                pic.classList.add("profile-pic");
+                profile.appendChild(pic);
+                var textdata = document.createElement('span');
+                _this.user.account_type;
+                textdata.innerText = _this.user.name.display_name
+                    + (_this.user.team ? ("\n" + _this.user.team.name) : "");
+                textdata.classList.add(_this.user.team ? "profile-name-team" : "profile-name");
+                profile.appendChild(textdata);
+                _this.readFolder("", document.getElementById("twits-files"));
+            });
         };
         ;
         twits.prototype.isFileMetadata = function (a) {
@@ -203,6 +221,12 @@ var wrapper;
                 return el;
             }, status = getElement("twits-status", document.body), message = getElement("twits-message", status), progress = getElement("twits-progress", status);
             status.style.display = "block";
+            if (this.user) {
+                var profile = document.createElement('img');
+                profile.src = this.user.profile_photo_url;
+                profile.classList.add("profile-pic");
+                status.insertBefore(profile, message);
+            }
             return { status: status, message: message, progress: progress };
         };
         ;
@@ -323,4 +347,3 @@ var wrapper;
         new twits(accessType);
     }, false);
 })(wrapper || (wrapper = {}));
-
