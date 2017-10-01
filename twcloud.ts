@@ -92,6 +92,7 @@ namespace wrapper {
 					+ (this.user.team ? ("\n" + this.user.team.name) : "");
 				textdata.classList.add(this.user.team ? "profile-name-team" : "profile-name");
 				profile.appendChild(textdata);
+				profile.classList.remove("startup");
 				this.readFolder("", document.getElementById("twits-files"));
 			})
 		};

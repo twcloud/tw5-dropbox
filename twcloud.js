@@ -63,6 +63,7 @@ var wrapper;
                     + (_this.user.team ? ("\n" + _this.user.team.name) : "");
                 textdata.classList.add(_this.user.team ? "profile-name-team" : "profile-name");
                 profile.appendChild(textdata);
+                profile.classList.remove("startup");
                 _this.readFolder("", document.getElementById("twits-files"));
             });
         };

@@ -90,6 +90,10 @@ body {
 	position: relative;
 }
 
+#twits-profile.startup {
+	display: none;
+}
+
 #twits-profile .profile-pic {
 	position: absolute;
 	display: block;
@@ -216,9 +220,13 @@ body {
 	<a class="access-full button" href="?type=full">Full Dropbox Access</a>
 	<a class="access-apps button" href="?type=apps">Apps Folder Access</a>
 </div>
-<div id="twits-profile"></div>
+<div id="twits-profile" class="startup"></div>
 <div id="twits-files"></div>
 <div id="twits-footer">
+<p>
+	Comments or questions are welcome at 
+	<a href="https://github.com/twcloud/tw5-dropbox">https://github.com/twcloud/tw5-dropbox</a>
+</p>
 <p>
 	*Originally built by <a href="http://twitter.com/Jermolene">@Jermolene</a> for TWC, 
 	and updated by <a href="https://github.com/Arlen22">@Arlen22</a> to use the Dropbox v2 API.
