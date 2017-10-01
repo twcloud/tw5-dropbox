@@ -38,8 +38,8 @@ namespace wrapper {
 		originalPath: string;
 		client: Dropbox;
 		isProd: false
-		apiKeyProd: ""               //waukml5k6zt6vzr
-		apiKey = "gy3j4gsa191p31x" //5zahnrxzw6wsy70
+		apiKeyFull = "gy3j4gsa191p31x"
+		apiKeyApps = "tu8jc7jsdeg55ta"
 		token: {
 			access_token: string,
 			account_id: string,
@@ -47,9 +47,10 @@ namespace wrapper {
 			uid: string
 		} = {} as any;
 
-		constructor() {
+		constructor(type: string) {
+			if(type !== "apps" && type !== "full") throw "type must be either apps or full"
 			this.client = new Dropbox({
-				clientId: this.apiKey
+				clientId: (type === "full" ? this.apiKeyFull : (type === "apps" ? this.apiKeyApps : ""))
 			});
 
 			// Authenticate against Dropbox
@@ -363,7 +364,11 @@ namespace wrapper {
 	}
 	// Do our stuff when the page has loaded
 	document.addEventListener("DOMContentLoaded", function (event) {
-		new twits();
+		const url = new URL(location.href);
+		const accessType = url.searchParams.get('type');
+		if(!accessType) return;
+		$('#twits-selector').hide();
+		new twits(accessType);
 	}, false);
 
 }

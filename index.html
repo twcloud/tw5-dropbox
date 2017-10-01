@@ -119,7 +119,43 @@ body {
 	border-top: 1px solid #bbb;
 	margin-top: 4em;
 	padding-top: 2em;
-	color: #bbb;
+	color: #aaa;
+}
+
+.button {
+  padding: .4em 1em;
+  display: block;
+  position: relative;
+  line-height: normal;
+  cursor: pointer;
+  text-align: left;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  overflow: visible;
+  margin-bottom: 0.5em;
+	border-radius: 3px;
+}
+
+#twits-selector {
+	margin:auto;
+	text-align: center;
+}
+
+#twits-selector .access-full,
+#twits-selector .access-apps {
+	display: inline-block;
+	border: solid #ddd thin;
+	color: #007ee5;
+	text-decoration: none;
+}
+#twits-selector .access-full {
+	display: inline-block;
+	border: solid #ddd thin;
+	color: white;
+	background-color: #007ee5;
+	text-decoration: none;
 }
 
 </style>
@@ -134,22 +170,22 @@ body {
 	in your browser so your data is never uploaded anywhere except directly to the dropbox account 
 	you are logged into. **
 </p>
-<p>
-	If you are having trouble with accented characters in your TiddlyWiki files please see 
-	<a href="https://groups.google.com/d/topic/tiddlywiki/dXuJsnD8Irw/discussion" target="_blank">this discussion</a>
-</p>
 <p>This site has now been upgraded to the Dropbox V2 API</p>
+<div id="twits-selector">
+	<a class="access-full button" href="?type=full">Full Dropbox Access</a>
+	<a class="access-apps button" href="?type=apps">Apps Folder Access</a>
+</div>
 <div id="twits-files"></div>
 <div id="twits-footer">
 <p>
-	*Built by <a href="http://twitter.com/Jermolene">@Jermolene</a>, and modified by 
-	<a href="https://github.com/Arlen22">@Arlen22</a>.
+	*Originally built by <a href="http://twitter.com/Jermolene">@Jermolene</a> for TWC, 
+	and updated by <a href="https://github.com/Arlen22">@Arlen22</a> to use the Dropbox v2 API.
 </p>
 <p>
-	**This does not apply to any code in the TiddlyWiki itself, only to the code in this page.
+	**The TiddlyWiki files you open have full access to the page, though not necessarily to your 
+	dropbox account. They are not sandboxed in any way. 
 </p>
 </div>
 </div>
-
 </body>
 </html>
