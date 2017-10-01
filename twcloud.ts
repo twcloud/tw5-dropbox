@@ -33,6 +33,7 @@ namespace wrapper {
 
 
 	class twits {
+		user: DropboxTypes.users.FullAccount;
 		currentRev: string;
 		originalText: string;
 		originalPath: string;
@@ -48,7 +49,7 @@ namespace wrapper {
 		} = {} as any;
 
 		constructor(type: string) {
-			if(type !== "apps" && type !== "full") throw "type must be either apps or full"
+			if (type !== "apps" && type !== "full") throw "type must be either apps or full"
 			this.client = new Dropbox({
 				clientId: (type === "full" ? this.apiKeyFull : (type === "apps" ? this.apiKeyApps : ""))
 			});
@@ -61,7 +62,9 @@ namespace wrapper {
 				data.split('&').map(e => e.split('=').map(f => decodeURIComponent(f))).forEach(e => {
 					this.token[e[0]] = e[1];
 				})
-				location.hash = "";
+				//keep the hash on localhost for development purposes
+				//it will be removed later when the wiki is loaded
+				if (location.origin !== "http://localhost") location.hash = "";
 			}
 
 			if (!this.token.access_token) {
@@ -76,7 +79,21 @@ namespace wrapper {
 		// Main application
 		initApp() {
 			this.clearStatusMessage();
-			this.readFolder("", document.getElementById("twits-files"));
+			this.client.usersGetCurrentAccount(undefined).then(res => {
+				this.user = res;
+				const profile = document.getElementById("twits-profile");
+				const pic = document.createElement('img');
+				pic.src = this.user.profile_photo_url;
+				pic.classList.add("profile-pic");
+				profile.appendChild(pic);
+				const textdata = document.createElement('span');
+				this.user.account_type
+				textdata.innerText = this.user.name.display_name
+					+ (this.user.team ? ("\n" + this.user.team.name) : "");
+				textdata.classList.add(this.user.team ? "profile-name-team" : "profile-name");
+				profile.appendChild(textdata);
+				this.readFolder("", document.getElementById("twits-files"));
+			})
 		};
 		isFileMetadata(a: any): a is DropboxTypes.files.FileMetadataReference {
 			return a[".tag"] === "file";
@@ -116,7 +133,7 @@ namespace wrapper {
 			return output.asObservable();
 		}
 		readFolder(path, parentNode: Node) {
-			
+
 			const loadingMessage = document.createElement("li");
 			loadingMessage.innerText = "Loading...";
 			loadingMessage.classList.add("loading-message");
@@ -247,6 +264,12 @@ namespace wrapper {
 				message = getElement("twits-message", status),
 				progress = getElement("twits-progress", status);
 			status.style.display = "block";
+			if (this.user) {
+				const profile = document.createElement('img');
+				profile.src = this.user.profile_photo_url;
+				profile.classList.add("profile-pic");
+				status.insertBefore(profile, message);
+			}
 			return { status: status, message: message, progress: progress };
 		};
 
@@ -366,7 +389,7 @@ namespace wrapper {
 	document.addEventListener("DOMContentLoaded", function (event) {
 		const url = new URL(location.href);
 		const accessType = url.searchParams.get('type');
-		if(!accessType) return;
+		if (!accessType) return;
 		$('#twits-selector').hide();
 		new twits(accessType);
 	}, false);

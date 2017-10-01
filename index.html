@@ -8,7 +8,7 @@
 <script src="//code.jquery.com/jquery-2.2.0.min.js"></script>
 <link rel="icon" href="favicon.ico" type="image/x-icon"/>
 <link rel="shortcut icon" href="favicon.ico" type="image/x-icon"/>
-<script src="twcloud.js?201709301"></script>
+<script src="twcloud.js?201709302"></script>
 <style type="text/css">
 
 /* These styles are in the head and so will survive when the parasite TiddlyWiki is loaded */
@@ -28,6 +28,16 @@
 	text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
 	background-color: #FCF8E3;
 	border: 8px solid #FBEED5;
+}
+
+#twits-status .profile-pic {
+	float: left;
+	width: 32px;
+	display: block;
+}
+
+.profile-pic {
+	border-radius: 50%;
 }
 
 #twits-message {
@@ -69,6 +79,38 @@ body {
 	vertical-align: middle;
 }
 
+#twits-profile {
+	/*padding: 20px;*/
+	border: solid #007ee5 thin;
+	border-radius: 5px;
+	width:300px;
+	height: 72px;
+	text-align: left;
+	margin: 0px auto;
+	position: relative;
+}
+
+#twits-profile .profile-pic {
+	position: absolute;
+	display: block;
+	width: 32px;
+	left: 20px;
+	top: 20px;
+	margin-right: 20px;
+	/*float: left;*/
+}
+#twits-profile .profile-name {
+	position: absolute;
+	display: block;
+	left: 60px;
+	top: 28px;
+}
+#twits-profile .profile-name-team {
+	position: absolute;
+	display: block;
+	left: 60px;
+	top: 18px;
+}
 #twits-files ol {
 	list-style: none;
 	text-align: left;
@@ -167,14 +209,14 @@ body {
 </h1>
 <p>
 	This app enables you to directly edit TiddlyWiki files stored in your Dropbox. It runs entirely 
-	in your browser so your data is never uploaded anywhere except directly to the dropbox account 
-	you are logged into. **
+	in your browser so your data is never uploaded anywhere except directly to your Dropbox account. **
 </p>
 <p>This site has now been upgraded to the Dropbox V2 API</p>
 <div id="twits-selector">
 	<a class="access-full button" href="?type=full">Full Dropbox Access</a>
 	<a class="access-apps button" href="?type=apps">Apps Folder Access</a>
 </div>
+<div id="twits-profile"></div>
 <div id="twits-files"></div>
 <div id="twits-footer">
 <p>
@@ -182,8 +224,7 @@ body {
 	and updated by <a href="https://github.com/Arlen22">@Arlen22</a> to use the Dropbox v2 API.
 </p>
 <p>
-	**The TiddlyWiki files you open have full access to the page, though not necessarily to your 
-	dropbox account. They are not sandboxed in any way. 
+	**The TiddlyWiki files you open have full access to the page, they are not sandboxed in any way.
 </p>
 </div>
 </div>
