@@ -1,240 +1,252 @@
 <!doctype html>
 <html>
+
 <head>
-<meta name="utf8beacon" content="éçñøåá—" />
-<title>TiddlyWiki5 in the Sky using Dropbox</title>
-<script src="dropbox.min.js"></script>
-<script src="Rx.min.js"></script>
-<script src="//code.jquery.com/jquery-2.2.0.min.js"></script>
-<link rel="icon" href="favicon.ico" type="image/x-icon"/>
-<link rel="shortcut icon" href="favicon.ico" type="image/x-icon"/>
-<script src="twcloud.js?201709302"></script>
-<style type="text/css">
+	<meta name="utf8beacon" content="éçñøåá—" />
+	<title>TiddlyWiki5 in the Sky using Dropbox</title>
+	<script src="dropbox.min.js"></script>
+	<script src="Rx.min.js"></script>
+	<script src="//code.jquery.com/jquery-2.2.0.min.js"></script>
+	<link rel="icon" href="favicon.ico" type="image/x-icon" />
+	<link rel="shortcut icon" href="favicon.ico" type="image/x-icon" />
+	<script src="twcloud.js?201709302"></script>
+	<style type="text/css">
+		/* These styles are in the head and so will survive when the parasite TiddlyWiki is loaded */
 
-/* These styles are in the head and so will survive when the parasite TiddlyWiki is loaded */
+		#twits-status {
+			position: fixed;
+			text-align: center;
+			width: 480px;
+			top: 1em;
+			left: 50%;
+			margin-left: -264px;
+			/* - width/2 - paddingHorz/2 - border */
+			padding: 16px 16px 16px 16px;
+			-webkit-border-radius: 8px;
+			-moz-border-radius: 8px;
+			border-radius: 8px;
+			color: #C09853;
+			text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+			background-color: #FCF8E3;
+			border: 8px solid #FBEED5;
+		}
 
-#twits-status {
-	position: fixed;
-	text-align: center;
-	width: 480px;
-	top: 1em;
-    left: 50%;
-    margin-left: -264px; /* - width/2 - paddingHorz/2 - border */
-	padding: 16px 16px 16px 16px;
-	-webkit-border-radius: 8px;
-	-moz-border-radius: 8px;
-	border-radius: 8px;
-	color: #C09853;
-	text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
-	background-color: #FCF8E3;
-	border: 8px solid #FBEED5;
-}
+		#twits-status .profile-pic {
+			float: left;
+			width: 32px;
+			display: block;
+		}
 
-#twits-status .profile-pic {
-	float: left;
-	width: 32px;
-	display: block;
-}
+		.profile-pic {
+			border-radius: 50%;
+		}
 
-.profile-pic {
-	border-radius: 50%;
-}
+		#twits-message {}
 
-#twits-message {
-
-}
-
-#twits-progress {
-
-}
-
-</style>
+		#twits-progress {}
+	</style>
 </head>
+
 <body>
 
-<style type="text/css">
+	<style type="text/css">
+		/* These styles are in the body and so will be nuked when the parasite TiddlyWiki is loaded */
 
-/* These styles are in the body and so will be nuked when the parasite TiddlyWiki is loaded */
+		body {
+			font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+			margin: 25px 0px;
+			padding: 0px;
+			text-align: center;
+		}
 
-body {
-	font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-	margin: 50px 0px;
-	padding: 0px;
-	text-align: center;
-}
+		#twits-greeting {
+			width: 480px;
+			margin: 0px auto;
+		}
 
-#twits-greeting {
-	width: 480px;
-	margin: 0px auto;
-}
+		.twits-beta {
+			background: red;
+			color: white;
+			font-size: 0.3em;
+			padding: 2px 4px 2px 4px;
+			-webkit-border-radius: 2px;
+			-moz-border-radius: 2px;
+			border-radius: 2px;
+			vertical-align: middle;
+		}
 
-.twits-beta {
-	background: red;
-	color: white;
-	font-size: 0.3em;
-	padding: 2px 4px 2px 4px;
-	-webkit-border-radius: 2px;
-	-moz-border-radius: 2px;
-	border-radius: 2px;
-	vertical-align: middle;
-}
+		#twits-profile {
+			/*padding: 20px;*/
+			border: solid #007ee5 thin;
+			border-radius: 5px;
+			width: 300px;
+			height: 60px;
+			text-align: left;
+			margin: 0px auto;
+			position: relative;
+		}
 
-#twits-profile {
-	/*padding: 20px;*/
-	border: solid #007ee5 thin;
-	border-radius: 5px;
-	width:300px;
-	height: 72px;
-	text-align: left;
-	margin: 0px auto;
-	position: relative;
-}
+		#twits-profile.startup {
+			display: none;
+		}
 
-#twits-profile.startup {
-	display: none;
-}
+		#twits-profile .profile-pic {
+			position: absolute;
+			display: block;
+			width: 32px;
+			left: 20px;
+			top: 14px;
+			margin-right: 20px;
+			/*float: left;*/
+		}
 
-#twits-profile .profile-pic {
-	position: absolute;
-	display: block;
-	width: 32px;
-	left: 20px;
-	top: 20px;
-	margin-right: 20px;
-	/*float: left;*/
-}
-#twits-profile .profile-name {
-	position: absolute;
-	display: block;
-	left: 60px;
-	top: 28px;
-}
-#twits-profile .profile-name-team {
-	position: absolute;
-	display: block;
-	left: 60px;
-	top: 18px;
-}
-#twits-files ol {
-	list-style: none;
-	text-align: left;
-	position: relative;
-	line-height: 1.3em;
-	padding-left: 24px;
-	color: #aaa;
-}
+		#twits-profile .profile-name {
+			position: absolute;
+			display: block;
+			left: 60px;
+			top: 20px;
+		}
 
-#twits-files li.loading-message {
-	padding-left: 24px;
-}
+		#twits-profile .profile-name-team {
+			position: absolute;
+			display: block;
+			left: 60px;
+			top: 12px;
+		}
 
-#twits-files li {
+		#twits-files ol {
+			list-style: none;
+			text-align: left;
+			position: relative;
+			line-height: 1.3em;
+			padding-left: 24px;
+			color: #aaa;
+		}
 
-}
+		#twits-files li.loading-message {
+			padding-left: 24px;
+		}
 
-#twits-files img {
-	padding-right: 6px;
-}
+		#twits-files li {}
 
-#twits-files .twits-file-entry {
-	text-decoration: none;
-	padding: 2px 4px 2px 4px;
-	-webkit-border-radius: 4px;
-	-moz-border-radius: 4px;
-	border-radius: 4px;
-}
+		#twits-files img {
+			padding-right: 6px;
+		}
 
-#twits-files span.twits-file-entry {
-	opacity: 0.7;
-}
+		#twits-files .twits-file-entry {
+			text-decoration: none;
+			padding: 2px 4px 2px 4px;
+			-webkit-border-radius: 4px;
+			-moz-border-radius: 4px;
+			border-radius: 4px;
+		}
 
-#twits-files a.twits-file-html {
-	background: yellow;
-}
+		#twits-files span.twits-file-entry {
+			opacity: 0.7;
+		}
 
-#twits-files a span {
-	font-size: 0.8em;
-	color: #aaa;
-}
+		#twits-files a.twits-file-html {
+			background: yellow;
+		}
 
-#twits-files a:hover {
-	background: #56B4FF;
-}
+		#twits-files a span {
+			font-size: 0.8em;
+			color: #777;
+		}
 
-#twits-footer {
-	border-top: 1px solid #bbb;
-	margin-top: 4em;
-	padding-top: 2em;
-	color: #aaa;
-}
+		#twits-files a:hover {
+			background: #56B4FF;
+		}
 
-.button {
-  padding: .4em 1em;
-  display: block;
-  position: relative;
-  line-height: normal;
-  cursor: pointer;
-  text-align: left;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-  overflow: visible;
-  margin-bottom: 0.5em;
-	border-radius: 3px;
-}
+		#twits-footer {
+			border-top: 1px solid #bbb;
+			margin-top: 4em;
+			padding-top: 2em;
+			color: #444;
+		}
 
-#twits-selector {
-	margin:auto;
-	text-align: center;
-}
+		.button {
+			padding: .4em 1em;
+			display: block;
+			position: relative;
+			line-height: normal;
+			cursor: pointer;
+			text-align: left;
+			-webkit-user-select: none;
+			-moz-user-select: none;
+			-ms-user-select: none;
+			user-select: none;
+			overflow: visible;
+			margin-bottom: 0.5em;
+			border-radius: 3px;
+		}
 
-#twits-selector .access-full,
-#twits-selector .access-apps {
-	display: inline-block;
-	border: solid #ddd thin;
-	color: #007ee5;
-	text-decoration: none;
-}
-#twits-selector .access-full {
-	display: inline-block;
-	border: solid #ddd thin;
-	color: white;
-	background-color: #007ee5;
-	text-decoration: none;
-}
+		#twits-selector {
+			margin: auto;
+			text-align: center;
+		}
 
-</style>
-<div id="twits-greeting">
-<h1>
-	TiddlyWiki5 in the Sky<br>
-	using Dropbox <span class="twits-beta">beta</span> <br/>
-	(by <a href="https://github.com/Arlen22">@Arlen22</a>*)
-</h1>
-<p>
-	This app enables you to directly edit TiddlyWiki files stored in your Dropbox. It runs entirely 
-	in your browser so your data is never uploaded anywhere except directly to your Dropbox account. **
-</p>
-<p>This site has now been upgraded to the Dropbox V2 API</p>
-<div id="twits-selector">
-	<a class="access-full button" href="?type=full">Full Dropbox Access</a>
-	<a class="access-apps button" href="?type=apps">Apps Folder Access</a>
-</div>
-<div id="twits-profile" class="startup"></div>
-<div id="twits-files"></div>
-<div id="twits-footer">
-<p>
-	Comments or questions are welcome at 
-	<a href="https://github.com/twcloud/tw5-dropbox">https://github.com/twcloud/tw5-dropbox</a>
-</p>
-<p>
-	*Originally built by <a href="http://twitter.com/Jermolene">@Jermolene</a> for TWC, 
-	and updated by <a href="https://github.com/Arlen22">@Arlen22</a> to use the Dropbox v2 API.
-</p>
-<p>
-	**The TiddlyWiki files you open have full access to the page, they are not sandboxed in any way.
-</p>
-</div>
-</div>
+		#twits-selector .access-full,
+		#twits-selector .access-apps {
+			display: inline-block;
+			border: solid #ddd thin;
+			color: #007ee5;
+			text-decoration: none;
+		}
+
+		#twits-selector .access-full {
+			display: inline-block;
+			border: solid #ddd thin;
+			color: white;
+			background-color: #007ee5;
+			text-decoration: none;
+		}
+
+		#twits-se {
+			background-color: #ACC9B7;
+			padding: 20px;
+			border-radius: 5px;
+		}
+	</style>
+	<div id="twits-greeting">
+		<h1>
+			TiddlyWiki5 in the Sky<br> using Dropbox <span class="twits-beta">beta</span> <br/> (by <a href="https://github.com/Arlen22">@Arlen22</a>*)
+		</h1>
+		<p>
+			This app enables you to directly edit TiddlyWiki files stored in your Dropbox. It runs entirely in your browser so your data
+			is never uploaded anywhere except directly to your Dropbox account. **
+		</p>
+		<p>This site has now been upgraded to the Dropbox V2 API</p>
+		<div id="twits-selector">
+			<a class="access-full button" href="?type=full">Full Dropbox Access</a>
+			<a class="access-apps button" href="?type=apps">Apps Folder Access</a>
+			<br/><br/>
+			<div id="twits-se">
+				<a id="twits-se-link" href="https://area51.stackexchange.com/proposals/105326/tiddlywiki?referrer=kk4xS6VP59WB49QQOgt7xA2">
+					<img src="https://area51.stackexchange.com/ads/proposal/105326.png" width="300" height="250" alt="Stack Exchange Q&A site proposal: TiddlyWiki" />
+				</a>
+				<p>
+					If you like the idea of having a site like <a href="https://www.stackoverflow.com">Stack Overflow</a> just for TiddlyWiki
+					questions, click on the banner above to go to the proposal, sign up and verify your email, then click the Commit button.
+					If you are already a Stack Exchange user, this will help even more.
+				</p>
+			</div>
+		</div>
+		<div id="twits-profile" class="startup"></div>
+		<div id="twits-files"></div>
+		<div id="twits-footer">
+			<p>
+				Comments or questions are welcome at
+				<a href="https://github.com/twcloud/tw5-dropbox">https://github.com/twcloud/tw5-dropbox</a>
+			</p>
+			<p>
+				*Originally built by <a href="http://twitter.com/Jermolene">@Jermolene</a> for TWC, and updated by <a href="https://github.com/Arlen22">@Arlen22</a>				to use the Dropbox v2 API.
+			</p>
+			<p>
+				**The TiddlyWiki files you open have full access to the page, they are not sandboxed in any way.
+			</p>
+		</div>
+	</div>
 </body>
+
 </html>
