@@ -1,11 +1,11 @@
 /*
-Parent: welcome-tiddly-chrome-file-saver
-    Child: thankyou-tiddly-chrome-file-saver
+Parent: welcome-tiddly-saver
+		Child: thankyou-tiddly-saver
+		if (is TWC) Parent: original-html-tiddly-saver
     
-Child: save-file-tiddly-chrome-file-saver
-    Parent: file-saved-tiddly-chrome-file-saver
+Child: save-file-tiddly-saver
+    Parent: file-saved-tiddly-saver
 	
-chrome.runtime.getURL('emergencySaver.js')
 */
 (function () {
 
