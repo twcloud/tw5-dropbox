@@ -33,6 +33,8 @@ namespace wrapper {
 
 
 	class twits {
+		targetOrigin: string = "*";
+		originalBlob: Blob;
 		messageSaverReady: boolean;
 		iframe: HTMLIFrameElement;
 		user: DropboxTypes.users.FullAccount;
@@ -50,7 +52,7 @@ namespace wrapper {
 			uid: string
 		} = {} as any;
 
-		constructor(type: string) {
+		constructor(type: string, preload: string) {
 			if (type !== "apps" && type !== "full") throw "type must be either apps or full"
 			this.client = new Dropbox({
 				clientId: (type === "full" ? this.apiKeyFull : (type === "apps" ? this.apiKeyApps : ""))
@@ -75,11 +77,11 @@ namespace wrapper {
 			} else {
 				this.client.setAccessToken(this.token.access_token);
 			}
-			this.initApp();
+			this.initApp(preload);
 		}
 
 		// Main application
-		initApp() {
+		initApp(preload: string) {
 			this.clearStatusMessage();
 			this.client.usersGetCurrentAccount(undefined).then(res => {
 				this.user = res;
@@ -95,7 +97,8 @@ namespace wrapper {
 				textdata.classList.add(this.user.team ? "profile-name-team" : "profile-name");
 				profile.appendChild(textdata);
 				profile.classList.remove("startup");
-				this.readFolder("", document.getElementById("twits-files"));
+				if (preload) this.openFile(preload);
+				else this.readFolder("", document.getElementById("twits-files"));
 			})
 		};
 		isFileMetadata(a: any): a is DropboxTypes.files.FileMetadataReference {
@@ -136,7 +139,7 @@ namespace wrapper {
 			return output.asObservable();
 		}
 		readFolder(path, parentNode: Node) {
-
+			const pageurl = new URL(location.href);
 			const loadingMessage = document.createElement("li");
 			loadingMessage.innerText = "Loading...";
 			loadingMessage.classList.add("loading-message");
@@ -176,7 +179,8 @@ namespace wrapper {
 					classes.push("twits-file-entry");
 					if (this.isFolderMetadata(stat) || (this.isFileMetadata(stat) && this.isHtmlFile(stat))) {
 						link = document.createElement("a");
-						link.href = "javascript:false;";
+						link.href = location.origin + location.pathname + location.search
+							+ "&path=" + encodeURIComponent(stat.path_lower) + location.hash;
 						link.setAttribute("data-twits-path", stat.path_lower);
 						link.addEventListener("click", this.onClickFolderEntry(), false);
 					} else {
@@ -240,6 +244,7 @@ namespace wrapper {
 						const unicode = this.manualConvertUTF8ToUnicode(byteData);
 						this.originalPath = path;
 						this.originalText = unicode;
+						this.originalBlob = res.fileBlob;
 						resolve({ data: unicode, blob: res.fileBlob });
 					});
 					reader.readAsArrayBuffer(data);
@@ -330,16 +335,17 @@ namespace wrapper {
 
 		loadTiddlywiki(data: string, blob: Blob) {
 			const self = this;
-			$(document.body).html(`<iframe id="twits-iframe" sandbox="allow-same-origin allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-scripts"></iframe>`)
+			//allow-same-origin 
+			$(document.body).html(`<iframe id="twits-iframe" sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-scripts"></iframe>`)
 			this.iframe = $('#twits-iframe')[0];
-			this.iframe.src = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
+			const inject = `<script src="${
+				location.origin + location.pathname.slice(0, location.pathname.lastIndexOf('/'))
+				}/tiddly-saver-inject.js"></script>`
+			this.iframe.src = URL.createObjectURL(new Blob([blob, inject], { type: 'text/html' }));
 			this.iframe.addEventListener('load', (ev) => {
-				const script = this.iframe.contentWindow.document.createElement('script');
-				script.src = "tiddly-saver-inject.js"
-				this.iframe.contentWindow.document.body.appendChild(script);
 				const handle = setInterval(() => {
-					if(this.messageSaverReady) clearInterval(handle);
-					else this.iframe.contentWindow.postMessage({ message: 'welcome-tiddly-chrome-file-saver' }, location.origin);
+					if (this.messageSaverReady) clearInterval(handle);
+					else this.iframe.contentWindow.postMessage({ message: 'welcome-tiddly-saver' }, this.targetOrigin);
 				}, 1000)
 			});
 			window.addEventListener('message', this.onmessage.bind(this));
@@ -348,13 +354,14 @@ namespace wrapper {
 		onmessage(event) {
 			if (event.data.message === 'save-file-tiddly-saver') {
 				this.saveTiddlyWiki(event.data.data, (err) => {
-					event.source.postMessage({ message: 'file-saved-tiddly-saver', id: event.data.id, error: err }, window.location.origin);
+					event.source.postMessage({ message: 'file-saved-tiddly-saver', id: event.data.id, error: err }, this.targetOrigin);
 				})
 			}
 			else if (event.data.message === 'thankyou-tiddly-saver') {
 				this.messageSaverReady = true;
+				if(event.data.isTWC) event.source.postMessage({ message: 'original-html-tiddly-saver', originalText: this.originalText }, this.targetOrigin);
 			}
-			else if (event.data.message === 'update-tiddly-chrome-file-saver') {
+			else if (event.data.message === 'update-tiddly-saver') {
 				if (event.data.TW5SaverAdded) {
 					alert("The saver for TW5 has now been added. Changes in TW5 will now be saved as usual.");
 				}
@@ -387,9 +394,10 @@ namespace wrapper {
 	document.addEventListener("DOMContentLoaded", function (event) {
 		const url = new URL(location.href);
 		const accessType = url.searchParams.get('type');
+		const preload = url.searchParams.get('path');
 		if (!accessType) return;
 		$('#twits-selector').hide();
-		new twits(accessType);
+		new twits(accessType, preload && decodeURIComponent(preload));
 	}, false);
 
 }

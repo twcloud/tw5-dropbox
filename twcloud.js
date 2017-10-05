@@ -15,8 +15,9 @@ var wrapper;
     //load classes from Rx
     var Observable = Rx.Observable, Subject = Rx.Subject, Subscriber = Rx.Subscriber, Subscription = Rx.Subscription;
     var twits = /** @class */ (function () {
-        function twits(type) {
+        function twits(type, preload) {
             var _this = this;
+            this.targetOrigin = "*";
             this.apiKeyFull = "gy3j4gsa191p31x";
             this.apiKeyApps = "tu8jc7jsdeg55ta";
             this.token = {};
@@ -44,10 +45,10 @@ var wrapper;
             else {
                 this.client.setAccessToken(this.token.access_token);
             }
-            this.initApp();
+            this.initApp(preload);
         }
         // Main application
-        twits.prototype.initApp = function () {
+        twits.prototype.initApp = function (preload) {
             var _this = this;
             this.clearStatusMessage();
             this.client.usersGetCurrentAccount(undefined).then(function (res) {
@@ -64,7 +65,10 @@ var wrapper;
                 textdata.classList.add(_this.user.team ? "profile-name-team" : "profile-name");
                 profile.appendChild(textdata);
                 profile.classList.remove("startup");
-                _this.readFolder("", document.getElementById("twits-files"));
+                if (preload)
+                    _this.openFile(preload);
+                else
+                    _this.readFolder("", document.getElementById("twits-files"));
             });
         };
         ;
@@ -104,6 +108,7 @@ var wrapper;
         };
         twits.prototype.readFolder = function (path, parentNode) {
             var _this = this;
+            var pageurl = new URL(location.href);
             var loadingMessage = document.createElement("li");
             loadingMessage.innerText = "Loading...";
             loadingMessage.classList.add("loading-message");
@@ -137,7 +142,8 @@ var wrapper;
                     classes.push("twits-file-entry");
                     if (_this.isFolderMetadata(stat) || (_this.isFileMetadata(stat) && _this.isHtmlFile(stat))) {
                         link = document.createElement("a");
-                        link.href = "javascript:false;";
+                        link.href = location.origin + location.pathname + location.search
+                            + "&path=" + encodeURIComponent(stat.path_lower) + location.hash;
                         link.setAttribute("data-twits-path", stat.path_lower);
                         link.addEventListener("click", _this.onClickFolderEntry(), false);
                     }
@@ -202,6 +208,7 @@ var wrapper;
                         var unicode = _this.manualConvertUTF8ToUnicode(byteData);
                         _this.originalPath = path;
                         _this.originalText = unicode;
+                        _this.originalBlob = res.fileBlob;
                         resolve({ data: unicode, blob: res.fileBlob });
                     });
                     reader.readAsArrayBuffer(data);
@@ -284,33 +291,35 @@ var wrapper;
         twits.prototype.loadTiddlywiki = function (data, blob) {
             var _this = this;
             var self = this;
-            $(document.body).html("<iframe id=\"twits-iframe\" sandbox=\"allow-same-origin allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-scripts\"></iframe>");
+            //allow-same-origin 
+            $(document.body).html("<iframe id=\"twits-iframe\" sandbox=\"allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-scripts\"></iframe>");
             this.iframe = $('#twits-iframe')[0];
-            this.iframe.src = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
+            var inject = "<script src=\"" + (location.origin + location.pathname.slice(0, location.pathname.lastIndexOf('/'))) + "/tiddly-saver-inject.js\"></script>";
+            this.iframe.src = URL.createObjectURL(new Blob([blob, inject], { type: 'text/html' }));
             this.iframe.addEventListener('load', function (ev) {
-                var script = _this.iframe.contentWindow.document.createElement('script');
-                script.src = "tiddly-saver-inject.js";
-                _this.iframe.contentWindow.document.body.appendChild(script);
                 var handle = setInterval(function () {
                     if (_this.messageSaverReady)
                         clearInterval(handle);
                     else
-                        _this.iframe.contentWindow.postMessage({ message: 'welcome-tiddly-chrome-file-saver' }, location.origin);
+                        _this.iframe.contentWindow.postMessage({ message: 'welcome-tiddly-saver' }, _this.targetOrigin);
                 }, 1000);
             });
             window.addEventListener('message', this.onmessage.bind(this));
             return true;
         };
         twits.prototype.onmessage = function (event) {
+            var _this = this;
             if (event.data.message === 'save-file-tiddly-saver') {
                 this.saveTiddlyWiki(event.data.data, function (err) {
-                    event.source.postMessage({ message: 'file-saved-tiddly-saver', id: event.data.id, error: err }, window.location.origin);
+                    event.source.postMessage({ message: 'file-saved-tiddly-saver', id: event.data.id, error: err }, _this.targetOrigin);
                 });
             }
             else if (event.data.message === 'thankyou-tiddly-saver') {
                 this.messageSaverReady = true;
+                if (event.data.isTWC)
+                    event.source.postMessage({ message: 'original-html-tiddly-saver', originalText: this.originalText }, this.targetOrigin);
             }
-            else if (event.data.message === 'update-tiddly-chrome-file-saver') {
+            else if (event.data.message === 'update-tiddly-saver') {
                 if (event.data.TW5SaverAdded) {
                     alert("The saver for TW5 has now been added. Changes in TW5 will now be saved as usual.");
                 }
@@ -342,9 +351,10 @@ var wrapper;
     document.addEventListener("DOMContentLoaded", function (event) {
         var url = new URL(location.href);
         var accessType = url.searchParams.get('type');
+        var preload = url.searchParams.get('path');
         if (!accessType)
             return;
         $('#twits-selector').hide();
-        new twits(accessType);
+        new twits(accessType, preload && decodeURIComponent(preload));
     }, false);
 })(wrapper || (wrapper = {}));
