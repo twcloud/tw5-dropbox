@@ -182,7 +182,8 @@ var wrapper;
         twits.prototype.openFile = function (path) {
             var _this = this;
             // Read the TiddlyWiki file
-            // We can't trust Dropbox to have detected that the file is UTF8, so we load it in binary and manually decode it
+            // We can't trust Dropbox to have detected that the file is UTF8, 
+            // so we load it in binary and manually decode it
             this.setStatusMessage("Reading HTML file...");
             this.client.filesDownload({
                 path: path
@@ -195,18 +196,20 @@ var wrapper;
                     var reader = new FileReader();
                     reader.addEventListener("loadend", function () {
                         // We have to manually decode the file as UTF8, annoyingly
-                        // [ I wonder if this is still necessary in v2 since it is a buffer -Arlen ]
+                        // [ I wonder if this is still necessary in v2 since it is a buffer 
+                        // however I think this is converting from UTF8 to UTF16  -Arlen ]
                         var byteData = new Uint8Array(reader.result);
                         var unicode = _this.manualConvertUTF8ToUnicode(byteData);
                         _this.originalPath = path;
                         _this.originalText = unicode;
-                        resolve(unicode);
+                        resolve({ data: unicode, blob: res.fileBlob });
                     });
                     reader.readAsArrayBuffer(data);
                     //debugger;
                 });
-            }).then(function (data) {
-                _this.loadTW5(data);
+            }).then(function (_a) {
+                var data = _a.data, blob = _a.blob;
+                _this.loadTiddlywiki(data, blob);
             });
         };
         twits.prototype.getStatusPanel = function () {
@@ -293,28 +296,32 @@ var wrapper;
                     capabilities: ["save"]
                 },
                 save: function (text, method, callback, options) {
-                    _this.setStatusMessage("Saving changes...");
-                    _this.client.filesUpload({
-                        path: _this.originalPath,
-                        mode: {
-                            ".tag": "update",
-                            "update": _this.currentRev
-                        },
-                        contents: text
-                    }).then(function (res) {
-                        _this.clearStatusMessage();
-                        _this.currentRev = res.rev;
-                        callback(null);
-                    }).catch(function (err) {
-                        console.log(err);
-                        callback(err);
-                    });
-                    //TODO: add progress tracker
+                    _this.saveTiddlyWiki(text, callback);
                     return true;
                 }
             });
         };
         ;
+        twits.prototype.saveTiddlyWiki = function (text, callback) {
+            var _this = this;
+            this.setStatusMessage("Saving changes...");
+            //TODO: add progress tracker
+            this.client.filesUpload({
+                path: this.originalPath,
+                mode: {
+                    ".tag": "update",
+                    "update": this.currentRev
+                },
+                contents: text
+            }).then(function (res) {
+                _this.clearStatusMessage();
+                _this.currentRev = res.rev;
+                callback(null);
+            }).catch(function (err) {
+                console.log(err);
+                callback(err.toString());
+            });
+        };
         twits.prototype.manualConvertUTF8ToUnicode = function (utf) {
             var uni = [], src = 0, b1, b2, b3, c;
             while (src < utf.length) {
@@ -335,6 +342,81 @@ var wrapper;
                 }
             }
             return uni.join("");
+        };
+        twits.prototype.loadTiddlywiki = function (data, blob) {
+            var _this = this;
+            var self = this;
+            $(document.body).html("<iframe id=\"twits-iframe\" sandbox=\"allow-same-origin allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-scripts\"></iframe>");
+            var iframe = $('#twits-iframe')[0];
+            iframe.src = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
+            iframe.addEventListener('load', function (ev) {
+                window.addEventListener('message', _this.onmessage.bind(_this));
+                // Inject the message box
+                // console.log('inserting message box');
+                // var messageBox = iframe.contentWindow.document.getElementById("tiddlyfox-message-box");
+                // if (!messageBox) {
+                // 	messageBox = iframe.contentWindow.document.createElement("div");
+                // 	messageBox.id = "tiddlyfox-message-box";
+                // 	messageBox.style.display = "none";
+                // 	iframe.contentWindow.document.body.appendChild(messageBox);
+                // }
+                // // Attach the event handler to the message box
+                // messageBox.addEventListener("tiddlyfox-save-file", this.onTiddlyfoxSave.bind(this), false);
+            });
+            return true;
+        };
+        // private idGenerator: number = 0;
+        // onTiddlyfoxSave(event) {
+        // 	// Get the details from the message
+        // 	var messageElement = event.target,
+        // 		path = messageElement.getAttribute("data-tiddlyfox-path"),
+        // 		content = messageElement.getAttribute("data-tiddlyfox-content"),
+        // 		backupPath = messageElement.getAttribute("data-tiddlyfox-backup-path"),
+        // 		messageId = "tiddlywiki-save-file-response-" + this.idGenerator++;
+        // 	// Remove the message element from the message box
+        // 	messageElement.parentNode.removeChild(messageElement);
+        // 	// Save the file
+        // 	this.saveTiddlyWiki(content, (err) => {
+        // 		// Send a confirmation message
+        // 		var event = document.createEvent("Events");
+        // 		event.initEvent("tiddlyfox-have-saved-file", true, false);
+        // 		event.savedFilePath = path;
+        // 		messageElement.dispatchEvent(event);
+        // 	})
+        // 	return false;
+        // }
+        twits.prototype.onmessage = function (event) {
+            if (event.data.message === 'save-file-tiddly-chrome-file-saver') {
+                this.saveTiddlyWiki(event.data.data, function (err) {
+                    if (err)
+                        event.source.postMessage({ message: 'file-saved-tiddly-saver', id: event.data.id, error: err }, window.location.origin);
+                    else
+                        event.source.postMessage({ message: 'file-saved-tiddly-saver', id: event.data.id, error: null }, window.location.origin);
+                });
+            }
+            else if (event.data.message === 'temp-save-file-tiddly-saver') {
+                //do something with the temp save data
+            }
+            else if (event.data.message === 'thankyou-tiddly-saver') {
+                messageSaverReady = true;
+                // if (!event.data.isTW5) {
+                // 	alert("TiddlyChrome could not add the saver. " +
+                // 		"It cannot save any changes. Clicking the " +
+                // 		"save button should trigger a download with " +
+                // 		"a funny name in a regular chrome window. \r\n\r\n" +
+                // 		"It is not recommended to use TiddlyChrome to " +
+                // 		"edit this file because it will not warn you " +
+                // 		"about unsaved changes before closing. If you " +
+                // 		"need to type in a password, go ahead and do that. \r\n\r\n" +
+                // 		"TiddlyChrome will keep trying to add the saver and will " +
+                // 		"notify you when it is successful");
+                // }
+            }
+            else if (event.data.message === 'update-tiddly-chrome-file-saver') {
+                if (event.data.TW5SaverAdded) {
+                    alert("The saver for TW5 has now been added. Changes in TW5 will now be saved as usual.");
+                }
+            }
         };
         return twits;
     }());
