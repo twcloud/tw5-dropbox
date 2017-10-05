@@ -34,7 +34,7 @@ namespace wrapper {
 
 	class twits {
 		messageSaverReady: boolean;
-		iframe: any;
+		iframe: HTMLIFrameElement;
 		user: DropboxTypes.users.FullAccount;
 		currentRev: string;
 		originalText: string;
@@ -251,6 +251,28 @@ namespace wrapper {
 
 		}
 
+		manualConvertUTF8ToUnicode(utf) {
+			var uni = [],
+				src = 0,
+				b1, b2, b3,
+				c;
+			while (src < utf.length) {
+				b1 = utf[src++];
+				if (b1 < 0x80) {
+					uni.push(String.fromCharCode(b1));
+				} else if (b1 < 0xE0) {
+					b2 = utf[src++];
+					c = String.fromCharCode(((b1 & 0x1F) << 6) | (b2 & 0x3F));
+					uni.push(c);
+				} else {
+					b2 = utf[src++];
+					b3 = utf[src++];
+					c = String.fromCharCode(((b1 & 0xF) << 12) | ((b2 & 0x3F) << 6) | (b3 & 0x3F));
+					uni.push(c);
+				}
+			}
+			return uni.join("");
+		}
 
 
 		getStatusPanel() {
@@ -305,51 +327,40 @@ namespace wrapper {
 			this.setProgress("");
 		};
 
-		trackProgress(xhr, isUpload?) {
-			var onProgressHandler = function (event) {
-				this.setProgress(Math.ceil(event.loaded / 1024) + "KB");
-			},
-				onLoadHandler = function () {
-				},
-				onErrorHandler = function () {
-					this.setStatusMessage("XHR error");
-				};
-			var src = isUpload ? xhr.upload : xhr;
-			src.addEventListener("progress", onProgressHandler, false);
-			src.addEventListener("load", onLoadHandler, false);
-			src.addEventListener("error", onErrorHandler, false);
 
-		};
-
-		loadTW5(data) {
-			location.hash = "";
-			var rawIndex = data.indexOf('<' + '!--~~ Raw markup ~~--' + '>');
-
-			var doc = document.createElement('html');
-			doc.innerHTML = data;
-
-			while (doc.children[0].childNodes.length > 0) {
-				try {
-					$(document.head).append(doc.children[0].childNodes[0]);
-				} catch (e) {
-					console.log(e);
+		loadTiddlywiki(data: string, blob: Blob) {
+			const self = this;
+			$(document.body).html(`<iframe id="twits-iframe" sandbox="allow-same-origin allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-scripts"></iframe>`)
+			this.iframe = $('#twits-iframe')[0];
+			this.iframe.src = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
+			this.iframe.addEventListener('load', (ev) => {
+				const script = this.iframe.contentWindow.document.createElement('script');
+				script.src = "tiddly-saver-inject.js"
+				this.iframe.contentWindow.document.body.appendChild(script);
+				const handle = setInterval(() => {
+					if(this.messageSaverReady) clearInterval(handle);
+					else this.iframe.contentWindow.postMessage({ message: 'welcome-tiddly-chrome-file-saver' }, location.origin);
+				}, 1000)
+			});
+			window.addEventListener('message', this.onmessage.bind(this));
+			return true;
+		}
+		onmessage(event) {
+			if (event.data.message === 'save-file-tiddly-saver') {
+				this.saveTiddlyWiki(event.data.data, (err) => {
+					event.source.postMessage({ message: 'file-saved-tiddly-saver', id: event.data.id, error: err }, window.location.origin);
+				})
+			}
+			else if (event.data.message === 'thankyou-tiddly-saver') {
+				this.messageSaverReady = true;
+			}
+			else if (event.data.message === 'update-tiddly-chrome-file-saver') {
+				if (event.data.TW5SaverAdded) {
+					alert("The saver for TW5 has now been added. Changes in TW5 will now be saved as usual.");
 				}
 			}
-			document.body.className = doc.children[1].className;
-			$(document.body).html(doc.children[1].innerHTML);
 
-			$tw.saverHandler.savers.push({
-				info: {
-					name: "tw5-in-the-sky",
-					priority: 5000,
-					capabilities: ["save"]
-				},
-				save: (text, method, callback, options) => {
-					this.saveTiddlyWiki(text, callback);
-					return true;
-				}
-			});
-		};
+		}
 
 		saveTiddlyWiki(text, callback) {
 			this.setStatusMessage("Saving changes...");
@@ -369,101 +380,6 @@ namespace wrapper {
 				console.log(err);
 				callback(err.toString());
 			})
-		}
-
-		manualConvertUTF8ToUnicode(utf) {
-			var uni = [],
-				src = 0,
-				b1, b2, b3,
-				c;
-			while (src < utf.length) {
-				b1 = utf[src++];
-				if (b1 < 0x80) {
-					uni.push(String.fromCharCode(b1));
-				} else if (b1 < 0xE0) {
-					b2 = utf[src++];
-					c = String.fromCharCode(((b1 & 0x1F) << 6) | (b2 & 0x3F));
-					uni.push(c);
-				} else {
-					b2 = utf[src++];
-					b3 = utf[src++];
-					c = String.fromCharCode(((b1 & 0xF) << 12) | ((b2 & 0x3F) << 6) | (b3 & 0x3F));
-					uni.push(c);
-				}
-			}
-			return uni.join("");
-		}
-		loadTiddlywiki(data: string, blob: Blob) {
-			const self = this;
-			$(document.body).html(`<iframe id="twits-iframe" sandbox="allow-same-origin allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-scripts"></iframe>`)
-			this.iframe = $('#twits-iframe')[0];
-			this.iframe.src = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
-			this.iframe.addEventListener('load', (ev) => {
-				
-				
-				// Inject the message box
-				// console.log('inserting message box');
-				// var messageBox = iframe.contentWindow.document.getElementById("tiddlyfox-message-box");
-				// if (!messageBox) {
-				// 	messageBox = iframe.contentWindow.document.createElement("div");
-				// 	messageBox.id = "tiddlyfox-message-box";
-				// 	messageBox.style.display = "none";
-				// 	iframe.contentWindow.document.body.appendChild(messageBox);
-				// }
-				// // Attach the event handler to the message box
-				// messageBox.addEventListener("tiddlyfox-save-file", this.onTiddlyfoxSave.bind(this), false);
-			});
-			window.addEventListener('message', this.onmessage.bind(this));
-			return true;
-		}
-		// private idGenerator: number = 0;
-		// onTiddlyfoxSave(event) {
-		// 	// Get the details from the message
-		// 	var messageElement = event.target,
-		// 		path = messageElement.getAttribute("data-tiddlyfox-path"),
-		// 		content = messageElement.getAttribute("data-tiddlyfox-content"),
-		// 		backupPath = messageElement.getAttribute("data-tiddlyfox-backup-path"),
-		// 		messageId = "tiddlywiki-save-file-response-" + this.idGenerator++;
-		// 	// Remove the message element from the message box
-		// 	messageElement.parentNode.removeChild(messageElement);
-		// 	// Save the file
-		// 	this.saveTiddlyWiki(content, (err) => {
-		// 		// Send a confirmation message
-		// 		var event = document.createEvent("Events");
-		// 		event.initEvent("tiddlyfox-have-saved-file", true, false);
-		// 		event.savedFilePath = path;
-		// 		messageElement.dispatchEvent(event);
-		// 	})
-		// 	return false;
-		// }
-		onmessage(event) {
-			if (event.data.message === 'save-file-tiddly-saver') {
-				this.saveTiddlyWiki(event.data.data, (err) => {
-					event.source.postMessage({ message: 'file-saved-tiddly-saver', id: event.data.id, error: err }, window.location.origin);
-				})
-			}
-			else if (event.data.message === 'thankyou-tiddly-saver') {
-				this.messageSaverReady = true;
-
-				// if (!event.data.isTW5) {
-				// 	alert("TiddlyChrome could not add the saver. " +
-				// 		"It cannot save any changes. Clicking the " +
-				// 		"save button should trigger a download with " +
-				// 		"a funny name in a regular chrome window. \r\n\r\n" +
-				// 		"It is not recommended to use TiddlyChrome to " +
-				// 		"edit this file because it will not warn you " +
-				// 		"about unsaved changes before closing. If you " +
-				// 		"need to type in a password, go ahead and do that. \r\n\r\n" +
-				// 		"TiddlyChrome will keep trying to add the saver and will " +
-				// 		"notify you when it is successful");
-				// }
-			}
-			else if (event.data.message === 'update-tiddly-chrome-file-saver') {
-				if (event.data.TW5SaverAdded) {
-					alert("The saver for TW5 has now been added. Changes in TW5 will now be saved as usual.");
-				}
-			}
-
 		}
 	}
 
