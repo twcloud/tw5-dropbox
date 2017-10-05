@@ -344,13 +344,11 @@ var wrapper;
             return uni.join("");
         };
         twits.prototype.loadTiddlywiki = function (data, blob) {
-            var _this = this;
             var self = this;
             $(document.body).html("<iframe id=\"twits-iframe\" sandbox=\"allow-same-origin allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-scripts\"></iframe>");
-            var iframe = $('#twits-iframe')[0];
-            iframe.src = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
-            iframe.addEventListener('load', function (ev) {
-                window.addEventListener('message', _this.onmessage.bind(_this));
+            this.iframe = $('#twits-iframe')[0];
+            this.iframe.src = URL.createObjectURL(new Blob([blob], { type: 'text/html' }));
+            this.iframe.addEventListener('load', function (ev) {
                 // Inject the message box
                 // console.log('inserting message box');
                 // var messageBox = iframe.contentWindow.document.getElementById("tiddlyfox-message-box");
@@ -363,6 +361,7 @@ var wrapper;
                 // // Attach the event handler to the message box
                 // messageBox.addEventListener("tiddlyfox-save-file", this.onTiddlyfoxSave.bind(this), false);
             });
+            window.addEventListener('message', this.onmessage.bind(this));
             return true;
         };
         // private idGenerator: number = 0;
@@ -386,19 +385,13 @@ var wrapper;
         // 	return false;
         // }
         twits.prototype.onmessage = function (event) {
-            if (event.data.message === 'save-file-tiddly-chrome-file-saver') {
+            if (event.data.message === 'save-file-tiddly-saver') {
                 this.saveTiddlyWiki(event.data.data, function (err) {
-                    if (err)
-                        event.source.postMessage({ message: 'file-saved-tiddly-saver', id: event.data.id, error: err }, window.location.origin);
-                    else
-                        event.source.postMessage({ message: 'file-saved-tiddly-saver', id: event.data.id, error: null }, window.location.origin);
+                    event.source.postMessage({ message: 'file-saved-tiddly-saver', id: event.data.id, error: err }, window.location.origin);
                 });
             }
-            else if (event.data.message === 'temp-save-file-tiddly-saver') {
-                //do something with the temp save data
-            }
             else if (event.data.message === 'thankyou-tiddly-saver') {
-                messageSaverReady = true;
+                this.messageSaverReady = true;
                 // if (!event.data.isTW5) {
                 // 	alert("TiddlyChrome could not add the saver. " +
                 // 		"It cannot save any changes. Clicking the " +
