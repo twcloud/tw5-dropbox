@@ -42,7 +42,7 @@ Child: save-file-tiddly-saver
 	window.getLocalPath = (url) => {
 		return url;
 	}
-	//Not for now. Paths aren't recognized, which could be bad.
+
 	//End TiddlyFox inject.js ========================================================
 
 
