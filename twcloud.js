@@ -15,7 +15,7 @@ var wrapper;
     //load classes from Rx
     var Observable = Rx.Observable, Subject = Rx.Subject, Subscriber = Rx.Subscriber, Subscription = Rx.Subscription;
     var twits = /** @class */ (function () {
-        function twits(type) {
+        function twits(type, hash) {
             var _this = this;
             this.apiKeyFull = "gy3j4gsa191p31x";
             this.apiKeyApps = "tu8jc7jsdeg55ta";
@@ -27,15 +27,11 @@ var wrapper;
             });
             // Authenticate against Dropbox
             this.setStatusMessage("Authenticating with Dropbox...");
-            if (document.location.hash) {
-                var data = document.location.hash.slice(1);
+            if (hash) {
+                var data = hash[0] === "#" ? hash.slice(1) : hash;
                 data.split('&').map(function (e) { return e.split('=').map(function (f) { return decodeURIComponent(f); }); }).forEach(function (e) {
                     _this.token[e[0]] = e[1];
                 });
-                //keep the hash on localhost for development purposes
-                //it will be removed later when the wiki is loaded
-                if (location.origin !== "http://localhost")
-                    location.hash = "";
             }
             if (!this.token.access_token) {
                 location.href = this.client.getAuthenticationUrl(location.href);
@@ -338,6 +334,8 @@ var wrapper;
         };
         return twits;
     }());
+    var locationHash = location.hash;
+    location.hash = "";
     // Do our stuff when the page has loaded
     document.addEventListener("DOMContentLoaded", function (event) {
         var url = new URL(location.href);
@@ -345,6 +343,6 @@ var wrapper;
         if (!accessType)
             return;
         $('#twits-selector').hide();
-        new twits(accessType);
+        new twits(accessType, locationHash);
     }, false);
 })(wrapper || (wrapper = {}));

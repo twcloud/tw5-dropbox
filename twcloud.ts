@@ -48,7 +48,7 @@ namespace wrapper {
 			uid: string
 		} = {} as any;
 
-		constructor(type: string) {
+		constructor(type: string, hash: string) {
 			if (type !== "apps" && type !== "full") throw "type must be either apps or full"
 			this.client = new Dropbox({
 				clientId: (type === "full" ? this.apiKeyFull : (type === "apps" ? this.apiKeyApps : ""))
@@ -57,14 +57,11 @@ namespace wrapper {
 			// Authenticate against Dropbox
 			this.setStatusMessage("Authenticating with Dropbox...");
 
-			if (document.location.hash) {
-				const data = document.location.hash.slice(1);
+			if (hash) {
+				const data = hash[0] === "#" ? hash.slice(1) : hash;
 				data.split('&').map(e => e.split('=').map(f => decodeURIComponent(f))).forEach(e => {
 					this.token[e[0]] = e[1];
 				})
-				//keep the hash on localhost for development purposes
-				//it will be removed later when the wiki is loaded
-				if (location.origin !== "http://localhost") location.hash = "";
 			}
 
 			if (!this.token.access_token) {
@@ -386,13 +383,15 @@ namespace wrapper {
 			return uni.join("");
 		}
 	}
+	const locationHash = location.hash;
+	location.hash = "";
 	// Do our stuff when the page has loaded
 	document.addEventListener("DOMContentLoaded", function (event) {
 		const url = new URL(location.href);
 		const accessType = url.searchParams.get('type');
 		if (!accessType) return;
 		$('#twits-selector').hide();
-		new twits(accessType);
+		new twits(accessType, locationHash);
 	}, false);
 
 }
