@@ -286,7 +286,7 @@ var wrapper;
                 info: {
                     name: "tw5-in-the-sky",
                     priority: 5000,
-                    capabilities: ["save"]
+                    capabilities: ["save", "autosave"]
                 },
                 save: function (text, method, callback, options) {
                     _this.setStatusMessage("Saving changes...");
