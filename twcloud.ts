@@ -335,7 +335,7 @@ namespace wrapper {
 				info: {
 					name: "tw5-in-the-sky",
 					priority: 5000,
-					capabilities: ["save"]
+					capabilities: ["save", "autosave"]
 				},
 				save: (text, method, callback, options) => {
 					this.setStatusMessage("Saving changes...");
